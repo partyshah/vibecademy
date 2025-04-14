@@ -91,6 +91,22 @@ const PythonIDE = () => {
   const [output, setOutput] = useState('');
   const [pyodide, setPyodide] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [lastRunOutput, setLastRunOutput] = useState('');
+
+  // Function to set code from chatbot
+  const setCodeFromChat = (newCode) => {
+    setCode(newCode);
+  };
+
+  // Function to get the current code
+  const getCurrentCode = () => {
+    return code;
+  };
+
+  // Function to get the last run output
+  const getLastOutput = () => {
+    return lastRunOutput;
+  };
 
   useEffect(() => {
     const loadPyodide = async () => {
@@ -145,9 +161,11 @@ const PythonIDE = () => {
     
     try {
       setOutput('');
+      let currentOutput = '';
       
       // Set up the callback to capture stdout
       pyodide.globals.set('output_callback', (text) => {
+        currentOutput += text;
         setOutput(prev => prev + text);
       });
       
@@ -159,10 +177,15 @@ const PythonIDE = () => {
       
       // If there's a return value, append it to the output
       if (result !== undefined && result !== null) {
+        currentOutput += String(result) + '\n';
         setOutput(prev => prev + String(result) + '\n');
       }
+
+      setLastRunOutput(currentOutput);
     } catch (error) {
-      setOutput(prev => prev + 'Error: ' + error.message + '\n');
+      const errorOutput = 'Error: ' + error.message + '\n';
+      setOutput(prev => prev + errorOutput);
+      setLastRunOutput(errorOutput);
     }
   };
 
@@ -206,7 +229,12 @@ const PythonIDE = () => {
         </Panel>
         <ResizeHandle />
         <Panel defaultSize={30} minSize={20}>
-          <Chatbot />
+          <Chatbot 
+            setCode={setCodeFromChat}
+            getCode={getCurrentCode}
+            getOutput={getLastOutput}
+            runCode={runCode}
+          />
         </Panel>
       </PanelGroup>
     </IDEContainer>
