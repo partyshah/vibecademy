@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import SplitPane from 'react-split-pane';
+import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import Editor from '@monaco-editor/react';
 import styled from 'styled-components';
 
@@ -64,29 +64,13 @@ const RunButton = styled.button`
   }
 `;
 
-// Custom styles for the split pane
-const StyledSplitPane = styled(SplitPane)`
-  .Resizer {
-    background: #444;
-    opacity: 1;
-    z-index: 1;
-    box-sizing: border-box;
-    background-clip: padding-box;
-    width: 11px;
-    margin: 0 -5px;
-    border-left: 5px solid rgba(255, 255, 255, 0);
-    border-right: 5px solid rgba(255, 255, 255, 0);
-    cursor: col-resize;
-    
-    &:hover {
-      border-left: 5px solid rgba(0, 122, 204, 0.5);
-      border-right: 5px solid rgba(0, 122, 204, 0.5);
-    }
-    
-    &.vertical {
-      width: 11px;
-      margin: 0 -5px;
-    }
+const ResizeHandle = styled(PanelResizeHandle)`
+  width: 11px;
+  background: #444;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background: rgba(0, 122, 204, 0.5);
   }
 `;
 
@@ -161,31 +145,31 @@ const PythonIDE = () => {
   return (
     <IDEContainer>
       <RunButton onClick={runCode}>Run</RunButton>
-      <StyledSplitPane
-        split="vertical"
-        defaultSize="50%"
-        minSize={200}
-        maxSize={800}
-      >
-        <Editor
-          height="100%"
-          defaultLanguage="python"
-          value={code}
-          onChange={setCode}
-          theme="vs-dark"
-          options={{
-            minimap: { enabled: false },
-            fontSize: 14,
-            lineNumbers: 'on',
-            roundedSelection: false,
-            scrollBeyondLastLine: false,
-            automaticLayout: true,
-          }}
-        />
-        <OutputContainer>
-          <div>{output || 'Output will appear here...'}</div>
-        </OutputContainer>
-      </StyledSplitPane>
+      <PanelGroup direction="horizontal">
+        <Panel defaultSize={50} minSize={20}>
+          <Editor
+            height="100%"
+            defaultLanguage="python"
+            value={code}
+            onChange={setCode}
+            theme="vs-dark"
+            options={{
+              minimap: { enabled: false },
+              fontSize: 14,
+              lineNumbers: 'on',
+              roundedSelection: false,
+              scrollBeyondLastLine: false,
+              automaticLayout: true,
+            }}
+          />
+        </Panel>
+        <ResizeHandle />
+        <Panel defaultSize={50} minSize={20}>
+          <OutputContainer>
+            <div>{output || 'Output will appear here...'}</div>
+          </OutputContainer>
+        </Panel>
+      </PanelGroup>
     </IDEContainer>
   );
 };
