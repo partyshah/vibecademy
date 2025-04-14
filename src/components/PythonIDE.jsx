@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import Editor from '@monaco-editor/react';
 import styled from 'styled-components';
+import Chatbot from './Chatbot';
 
 const IDEContainer = styled.div`
   height: 100vh;
@@ -74,6 +75,17 @@ const ResizeHandle = styled(PanelResizeHandle)`
   }
 `;
 
+const LoadingContainer = styled.div`
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #1e1e1e;
+  color: #fff;
+  font-family: 'Segoe UI', 'Arial', sans-serif;
+`;
+
 const PythonIDE = () => {
   const [code, setCode] = useState('# Write your Python code here\nprint("Hello, World!")');
   const [output, setOutput] = useState('');
@@ -82,34 +94,50 @@ const PythonIDE = () => {
 
   useEffect(() => {
     const loadPyodide = async () => {
-      const pyodide = await window.loadPyodide({
-        indexURL: "https://cdn.jsdelivr.net/pyodide/v0.24.1/full/"
-      });
-      
-      // Set up custom stdout capture
-      pyodide.runPython(`
-        import sys
-        from io import StringIO
-        
-        class StringIOWithCallback(StringIO):
-            def __init__(self, initial_value='', callback=None):
-                super().__init__(initial_value)
-                self.callback = callback
+      try {
+        // Make sure the script is loaded
+        if (typeof window.loadPyodide !== 'function') {
+          console.error('Pyodide script not loaded');
+          setOutput('Error: Pyodide failed to load. Please refresh the page.');
+          setIsLoading(false);
+          return;
+        }
 
-            def write(self, text):
-                super().write(text)
-                if self.callback:
-                    self.callback(text)
+        const pyodide = await window.loadPyodide({
+          indexURL: "https://cdn.jsdelivr.net/pyodide/v0.24.1/full/"
+        });
         
-        def set_stdout_callback(callback):
-            sys.stdout = StringIOWithCallback(callback=callback)
-            sys.stderr = StringIOWithCallback(callback=callback)
-      `);
-      
-      setPyodide(pyodide);
-      setIsLoading(false);
+        // Set up custom stdout capture
+        pyodide.runPython(`
+          import sys
+          from io import StringIO
+          
+          class StringIOWithCallback(StringIO):
+              def __init__(self, initial_value='', callback=None):
+                  super().__init__(initial_value)
+                  self.callback = callback
+
+              def write(self, text):
+                  super().write(text)
+                  if self.callback:
+                      self.callback(text)
+          
+          def set_stdout_callback(callback):
+              sys.stdout = StringIOWithCallback(callback=callback)
+              sys.stderr = StringIOWithCallback(callback=callback)
+        `);
+        
+        setPyodide(pyodide);
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error loading Pyodide:', error);
+        setOutput('Error: ' + error.message);
+        setIsLoading(false);
+      }
     };
-    loadPyodide();
+
+    // Small delay to ensure the script has time to load
+    setTimeout(loadPyodide, 1000);
   }, []);
 
   const runCode = async () => {
@@ -139,14 +167,21 @@ const PythonIDE = () => {
   };
 
   if (isLoading) {
-    return <div>Loading Pyodide...</div>;
+    return (
+      <LoadingContainer>
+        <div>
+          <h2>Loading Python Environment...</h2>
+          <p>This may take a few seconds on first load.</p>
+        </div>
+      </LoadingContainer>
+    );
   }
 
   return (
     <IDEContainer>
       <RunButton onClick={runCode}>Run</RunButton>
       <PanelGroup direction="horizontal">
-        <Panel defaultSize={50} minSize={20}>
+        <Panel defaultSize={40} minSize={20}>
           <Editor
             height="100%"
             defaultLanguage="python"
@@ -164,10 +199,14 @@ const PythonIDE = () => {
           />
         </Panel>
         <ResizeHandle />
-        <Panel defaultSize={50} minSize={20}>
+        <Panel defaultSize={30} minSize={20}>
           <OutputContainer>
             <div>{output || 'Output will appear here...'}</div>
           </OutputContainer>
+        </Panel>
+        <ResizeHandle />
+        <Panel defaultSize={30} minSize={20}>
+          <Chatbot />
         </Panel>
       </PanelGroup>
     </IDEContainer>
